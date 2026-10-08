@@ -1,9 +1,7 @@
 ﻿using ModelContextProtocol.Server;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace McpServer1.Tools
 {
@@ -39,8 +37,45 @@ namespace McpServer1.Tools
             return $"El sistema lleva encendido: {uptime.Days}d {uptime.Hours}h {uptime.Minutes}m";
         }
 
-        // --- P/Invoke para Windows API ---
+        [McpServerTool]
+        [Description("Retorna el espacio usado y libre de la unidad donde está instalado el SO.")]
+        public static string GetDiskSO_Space()
+        {
+            try
+            {
+                var systemRoot = Path.GetPathRoot(Environment.SystemDirectory) ?? "/";
+                var drive = new DriveInfo(systemRoot);
 
+                if (!drive.IsReady)
+                {
+                    return $"La unidad {drive.Name} no está lista.";
+                }
+
+                decimal total = drive.TotalSize;
+                decimal free = drive.AvailableFreeSpace;
+                decimal used = total - free;
+
+                decimal totalGb = Math.Round(total / (1024m * 1024m * 1024m), 2);
+                decimal freeGb = Math.Round(free / (1024m * 1024m * 1024m), 2);
+                decimal usedGb = Math.Round(used / (1024m * 1024m * 1024m), 2);
+
+                decimal usedPct = total == 0 ? 0 : Math.Round(used / total * 100, 1);
+
+                return $"""
+                Unidad: {drive.Name}
+                Capacidad Total: {totalGb} GB
+                Usado: {usedGb} GB ({usedPct} %)
+                Libre: {freeGb} GB
+                """;
+            }
+            catch (Exception ex)
+            {
+                return $"Error al obtener información del disco: {ex.Message}";
+            }
+        }
+
+
+        // --- P/Invoke para Windows API ---
         [DllImport("kernel32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
